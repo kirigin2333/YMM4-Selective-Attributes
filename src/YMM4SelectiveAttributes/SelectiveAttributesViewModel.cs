@@ -77,7 +77,7 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     private readonly ActionCommand copySourceCommand;
     private readonly ActionCommand pasteTargetsCommand;
     public ICommand CopySourceCommand => copySourceCommand;
-    public ICommand PasteTargetsCommand => pasteTargetsCommand
+    public ICommand PasteTargetsCommand => pasteTargetsCommand;
 
     public string Title => "Selective Attributes";
     public event EventHandler<CreateNewToolViewRequestedEventArgs>? CreateNewToolViewRequested;
