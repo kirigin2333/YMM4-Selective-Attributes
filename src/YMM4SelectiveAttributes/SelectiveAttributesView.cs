@@ -60,6 +60,7 @@ public sealed class SelectiveAttributesView : UserControl
         panel.Children.Add(CreateCheckBox("旋转", nameof(SelectiveAttributesViewModel.CopyRotation)));
         panel.Children.Add(CreateCheckBox("混合模式", nameof(SelectiveAttributesViewModel.CopyBlend)));
         panel.Children.Add(CreateCheckBox("可见性（隐藏状态）", nameof(SelectiveAttributesViewModel.CopyVisibility)));
+        panel.Children.Add(CreateCheckBox("视频效果 / 滤镜及参数", nameof(SelectiveAttributesViewModel.CopyEffects)));
 
         panel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8) });
         panel.Children.Add(CreateCheckBox("按目标物品长度缩放关键帧位置", nameof(SelectiveAttributesViewModel.FitLength)));
