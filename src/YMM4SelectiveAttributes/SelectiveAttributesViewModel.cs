@@ -17,7 +17,9 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         IReadOnlyDictionary<string, Track> Tracks,
         object? Blend,
         bool HasBlend,
-        bool? IsHidden);
+        bool? IsHidden,
+        object? VideoEffects,
+        bool HasVideoEffects);
 
     private static readonly string[] PositionNames =
     [
@@ -58,6 +60,9 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
     private bool copyVisibility;
     public bool CopyVisibility { get => copyVisibility; set => Set(ref copyVisibility, value); }
+
+    private bool copyEffects;
+    public bool CopyEffects { get => copyEffects; set => Set(ref copyEffects, value); }
 
     private bool fitLength = true;
     public bool FitLength { get => fitLength; set => Set(ref fitLength, value); }
@@ -126,13 +131,22 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
             ? (bool?)hiddenProperty.GetValue(source)
             : null;
 
+        // GetClone() gives us an independent copy of the source item's effect collection.
+        // Only the cloned VideoEffects property is retained; the target item itself is never replaced.
+        var clonedSource = source.GetClone();
+        var effectsProperty = FindPublicProperty(clonedSource.GetType(), "VideoEffects");
+        var videoEffects = effectsProperty?.CanRead == true ? effectsProperty.GetValue(clonedSource) : null;
+        var hasVideoEffects = effectsProperty?.CanRead == true;
+
         snapshot = new Snapshot(
             source.Length,
             source.KeyFrames.Frames.ToArray(),
             tracks,
             blend,
             hasBlend,
-            isHidden);
+            isHidden,
+            videoEffects,
+            hasVideoEffects);
         sourceItem = source;
         Status = "来源属性已复制。现在选择一个或多个目标物品，再点击“粘贴到选中物品”。";
     }
@@ -153,7 +167,7 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         }
 
         var selectedNames = GetSelectedAnimationNames().ToHashSet();
-        if (selectedNames.Count == 0 && !CopyBlend && !CopyVisibility)
+        if (selectedNames.Count == 0 && !CopyBlend && !CopyVisibility && !CopyEffects)
         {
             Status = "请至少勾选一个要复制的属性。";
             return;
@@ -166,6 +180,8 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
                 TryCopyProperty(sourceSnapshot.Blend, target, "Blend");
             if (CopyVisibility && sourceSnapshot.IsHidden is bool hidden)
                 TryCopyProperty(hidden, target, "IsHidden");
+            if (CopyEffects && sourceSnapshot.HasVideoEffects)
+                TryCopyProperty(sourceSnapshot.VideoEffects, target, "VideoEffects");
         }
 
         undoRedoManager.Record();
