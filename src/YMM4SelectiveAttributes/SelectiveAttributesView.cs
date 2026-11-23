@@ -64,6 +64,7 @@ public sealed class SelectiveAttributesView : UserControl
         panel.Children.Add(CreateCheckBox("音频效果及参数", nameof(SelectiveAttributesViewModel.CopyAudioEffects)));
         panel.Children.Add(CreateCheckBox("音量动画", nameof(SelectiveAttributesViewModel.CopyVolume)));
         panel.Children.Add(CreateCheckBox("声像 / Pan 动画", nameof(SelectiveAttributesViewModel.CopyPan)));
+        panel.Children.Add(CreateCheckBox("其他基础属性（淡入淡出 / 播放速度 / 反转 / 置顶）", nameof(SelectiveAttributesViewModel.CopyExtraProperties)));
 
         panel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8) });
         panel.Children.Add(CreateCheckBox("按目标物品长度缩放关键帧位置", nameof(SelectiveAttributesViewModel.FitLength)));
