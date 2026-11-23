@@ -49,6 +49,65 @@ public sealed class SelectiveAttributesView : UserControl
 
         panel.Children.Add(new TextBlock
         {
+            Text = "属性预设",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 2, 0, 4)
+        });
+
+        var presetNameBox = new TextBox
+        {
+            MinWidth = 140,
+            Margin = new Thickness(0, 0, 0, 6),
+            ToolTip = "输入预设名称，例如：人物位置"
+        };
+        presetNameBox.SetBinding(TextBox.TextProperty, new Binding(nameof(SelectiveAttributesViewModel.PresetName))
+        {
+            Mode = BindingMode.TwoWay,
+            UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+        });
+        panel.Children.Add(presetNameBox);
+
+        var presetButtons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 0, 6)
+        };
+
+        var savePresetButton = new Button { Content = "保存当前选项", Padding = new Thickness(7, 4, 7, 4), Margin = new Thickness(0, 0, 5, 0) };
+        savePresetButton.SetBinding(Button.CommandProperty, new Binding(nameof(SelectiveAttributesViewModel.SavePresetCommand)));
+        presetButtons.Children.Add(savePresetButton);
+
+        var presetSelector = new ComboBox
+        {
+            MinWidth = 110,
+            Margin = new Thickness(0, 0, 5, 0),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        presetSelector.SetBinding(ItemsControl.ItemsSourceProperty, new Binding(nameof(SelectiveAttributesViewModel.PresetNames)));
+        presetSelector.SetBinding(Selector.SelectedItemProperty, new Binding(nameof(SelectiveAttributesViewModel.SelectedPreset))
+        {
+            Mode = BindingMode.TwoWay
+        });
+        presetButtons.Children.Add(presetSelector);
+
+        var loadPresetButton = new Button { Content = "载入", Padding = new Thickness(7, 4, 7, 4), Margin = new Thickness(0, 0, 5, 0) };
+        loadPresetButton.SetBinding(Button.CommandProperty, new Binding(nameof(SelectiveAttributesViewModel.LoadPresetCommand)));
+        presetButtons.Children.Add(loadPresetButton);
+
+        var deletePresetButton = new Button { Content = "删除", Padding = new Thickness(7, 4, 7, 4) };
+        deletePresetButton.SetBinding(Button.CommandProperty, new Binding(nameof(SelectiveAttributesViewModel.DeletePresetCommand)));
+        presetButtons.Children.Add(deletePresetButton);
+
+        panel.Children.Add(presetButtons);
+        panel.Children.Add(new TextBlock
+        {
+            Text = "预设只保存下方勾选项，不保存来源物品或素材。",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        panel.Children.Add(new TextBlock
+        {
             Text = "要复制的属性",
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 2, 0, 4)
