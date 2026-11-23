@@ -49,6 +49,7 @@ Restart YMM4 and open the tool from the Tools menu.
 - The current code has not yet been compiled or run against YMM4 4.55.0.0. Treat this as an implementation-in-progress, not an installable release.
 - YMM4's basic `IVideoItem` model exposes one `Zoom` animation and one `Rotation` animation in the motion-copy implementation used as a reference. Independent X/Y/Z rotation or independent X/Y scale are not implemented here.
 - Effect collections are copied via YMM4's item-clone mechanism, but the effect-stack assignment and undo behavior still need runtime validation on v4.55.0.0.
+- YMM4 keyframes may be shared by multiple animation tracks on an item. The current frame-sync routine is adapted from ToolBoxPlugin and must be tested to ensure changing selected tracks does not alter unrelated animated tracks.
 - Preset save/load is not implemented yet.
 - The basic blend property is applied only if YMM4 exposes a writable property with a matching type on the target item.
 - The plugin copies from one selected source item at a time; paste can target multiple selected items, applying only properties available on each target type.
