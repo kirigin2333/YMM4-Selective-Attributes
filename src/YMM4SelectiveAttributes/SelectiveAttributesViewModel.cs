@@ -21,7 +21,8 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         object? VideoEffects,
         bool HasVideoEffects,
         object? AudioEffects,
-        bool HasAudioEffects);
+        bool HasAudioEffects,
+        IReadOnlyDictionary<string, object?> ExtraProperties);
 
     private static readonly string[] AnimationPropertyNames =
     [
@@ -29,6 +30,10 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     ];
 
     private static readonly string[] PositionNames = ["X", "Y", "Z"];
+    private static readonly string[] ExtraPropertyNames =
+    [
+        "FadeIn", "FadeOut", "PlaybackRate", "IsInverted", "IsAlwaysOnTop", "IsZOrderEnabled"
+    ];
 
     private Timeline? timeline;
     private UndoRedoManager? undoRedoManager;
@@ -64,6 +69,9 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
     private bool copyAudioEffects;
     public bool CopyAudioEffects { get => copyAudioEffects; set => Set(ref copyAudioEffects, value); }
+
+    private bool copyExtraProperties;
+    public bool CopyExtraProperties { get => copyExtraProperties; set => Set(ref copyExtraProperties, value); }
 
     private bool fitLength = true;
     public bool FitLength { get => fitLength; set => Set(ref fitLength, value); }
@@ -168,6 +176,10 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         var audioEffectsProperty = FindPublicProperty(clonedSource.GetType(), "AudioEffects");
         var videoEffects = videoEffectsProperty?.CanRead == true ? videoEffectsProperty.GetValue(clonedSource) : null;
         var audioEffects = audioEffectsProperty?.CanRead == true ? audioEffectsProperty.GetValue(clonedSource) : null;
+        var extraProperties = ExtraPropertyNames
+            .Select(name => (Name: name, Property: FindPublicProperty(source.GetType(), name)))
+            .Where(entry => entry.Property?.CanRead == true)
+            .ToDictionary(entry => entry.Name, entry => entry.Property!.GetValue(source));
 
         snapshot = new Snapshot(
             GetIntProperty(source, "Length") ?? 1,
@@ -179,7 +191,8 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
             videoEffects,
             videoEffectsProperty?.CanRead == true,
             audioEffects,
-            audioEffectsProperty?.CanRead == true);
+            audioEffectsProperty?.CanRead == true,
+            extraProperties);
 
         sourceItem = source;
         Status = "来源属性已复制。现在选择一个或多个目标物品，再点击“粘贴到选中物品”。";
@@ -203,7 +216,7 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
         var selectedNames = GetSelectedAnimationNames().ToHashSet();
         if (selectedNames.Count == 0 &&
-            !CopyBlend && !CopyVisibility && !CopyVideoEffects && !CopyAudioEffects)
+            !CopyBlend && !CopyVisibility && !CopyVideoEffects && !CopyAudioEffects && !CopyExtraProperties)
         {
             Status = "请至少勾选一个要复制的属性。";
             return;
@@ -242,6 +255,16 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
                 var copied = sourceSnapshot.HasAudioEffects && TryCopyProperty(sourceSnapshot.AudioEffects, target, "AudioEffects");
                 changed |= copied;
                 skippedSomewhere |= !copied;
+            }
+
+            if (CopyExtraProperties)
+            {
+                foreach (var (name, value) in sourceSnapshot.ExtraProperties)
+                {
+                    var copied = TryCopyProperty(value, target, name);
+                    changed |= copied;
+                    skippedSomewhere |= !copied;
+                }
             }
         }
 
