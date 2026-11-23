@@ -61,8 +61,36 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet build failed with exit code $LASTEXITCODE"
     }
+    # Create a YMM4 installer package (.ymme is a ZIP archive with a renamed extension).
+    $projectDir = Join-Path $repoRoot "src\YMM4SelectiveAttributes"
+    $pluginDll = Join-Path $projectDir "bin\Release\net10.0-windows10.0.19041.0\YMM4SelectiveAttributes.dll"
+    if (-not (Test-Path $pluginDll)) {
+        throw "Build output DLL not found: $pluginDll"
+    }
+
+    $packageRoot = Join-Path $repoRoot "dist"
+    $stagingRoot = Join-Path $env:TEMP "YMM4SelectiveAttributes-ymme-staging"
+    $pluginFolder = Join-Path $stagingRoot "YMM4SelectiveAttributes"
+    $packageZip = Join-Path $packageRoot "YMM4SelectiveAttributes.zip"
+    $packageYmme = Join-Path $packageRoot "YMM4SelectiveAttributes.ymme"
+
+    if (Test-Path $stagingRoot) {
+        Remove-Item $stagingRoot -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $pluginFolder -Force | Out-Null
+    New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
+    Copy-Item $pluginDll -Destination $pluginFolder
+
+    if (Test-Path $packageZip) { Remove-Item $packageZip -Force }
+    if (Test-Path $packageYmme) { Remove-Item $packageYmme -Force }
+
+    Compress-Archive -Path (Join-Path $stagingRoot "*") -DestinationPath $packageZip -CompressionLevel Optimal
+    Move-Item $packageZip $packageYmme
+
     Write-Host ""
-    Write-Host "Build complete. Check YMM4 user\plugin\YMM4SelectiveAttributes\ for the plugin DLL."
+    Write-Host "Build complete."
+    Write-Host "Installed plugin DLL: $installDir\user\plugin\YMM4SelectiveAttributes\YMM4SelectiveAttributes.dll"
+    Write-Host "YMM4 installer package: $packageYmme"
 }
 finally {
     Pop-Location
