@@ -17,13 +17,13 @@ The implementation edits animation tracks and a small set of direct item propert
 
 ## Build
 
-1. Copy `Directory.Build.props.sample` to `Directory.Build.props` in the repository root.
-2. Edit `YMM4DirPath` in `Directory.Build.props` to the YMM4 installation directory. Keep the trailing backslash.
-3. Run:
+Run this from PowerShell in the repository directory (replace the path with the folder containing `YukkuriMovieMaker.exe`):
 
 ```powershell
-dotnet build .\src\YMM4SelectiveAttributes\YMM4SelectiveAttributes.csproj -c Release
+.\build.ps1 -YMM4DirPath "C:\YukkuriMovieMaker4"
 ```
+
+The script checks the YMM4 DLLs and .NET 10 SDK, writes `Directory.Build.props`, builds the project, and installs the resulting plugin DLL. Visual Studio is not required. If the .NET 10 SDK is missing, install it before running the script.
 
 If the build succeeds and the path is correct, the post-build target copies the plugin DLL into:
 
