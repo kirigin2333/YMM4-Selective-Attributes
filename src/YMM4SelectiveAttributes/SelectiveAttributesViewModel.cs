@@ -129,7 +129,6 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
                 loadPresetCommand?.RaiseCanExecuteChanged();
                 loadAndPastePresetCommand?.RaiseCanExecuteChanged();
                 deletePresetCommand?.RaiseCanExecuteChanged();
-        loadAndPastePresetCommand?.RaiseCanExecuteChanged();
             }
         }
     }
@@ -306,6 +305,7 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
         loadPresetCommand?.RaiseCanExecuteChanged();
         deletePresetCommand?.RaiseCanExecuteChanged();
+        loadAndPastePresetCommand?.RaiseCanExecuteChanged();
     }
 
     public void SetTimelineToolInfo(TimelineToolInfo info)
