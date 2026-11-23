@@ -335,6 +335,7 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     {
         copySourceCommand.RaiseCanExecuteChanged();
         pasteTargetsCommand.RaiseCanExecuteChanged();
+        loadAndPastePresetCommand.RaiseCanExecuteChanged();
     }
 
     public void Dispose()
