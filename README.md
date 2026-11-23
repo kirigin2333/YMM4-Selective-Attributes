@@ -46,7 +46,7 @@ Restart YMM4 and open the tool from the Tools menu.
 
 ## Known limitations
 
-- The current code has not yet been compiled or run against YMM4 4.55.0.0. Treat this as an implementation-in-progress, not an installable release.
+- The user has confirmed the previous build loads in YMM4 4.55.0.0 and that batch paste, undo/redo, media preservation, and video-effect copying work. The newly added preset UI still needs a fresh build and runtime test.
 - YMM4's basic `IVideoItem` model exposes one `Zoom` animation and one `Rotation` animation in the motion-copy implementation used as a reference. Independent X/Y/Z rotation or independent X/Y scale are not implemented here.
 - Effect collections are copied via YMM4's item-clone mechanism, but the effect-stack assignment and undo behavior still need runtime validation on v4.55.0.0.
 - YMM4 keyframes may be shared by multiple animation tracks on an item. The current frame-sync routine is adapted from ToolBoxPlugin and must be tested to ensure changing selected tracks does not alter unrelated animated tracks.
