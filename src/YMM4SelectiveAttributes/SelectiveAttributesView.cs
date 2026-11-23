@@ -94,6 +94,15 @@ public sealed class SelectiveAttributesView : UserControl
         loadPresetButton.SetBinding(Button.CommandProperty, new Binding(nameof(SelectiveAttributesViewModel.LoadPresetCommand)));
         presetButtons.Children.Add(loadPresetButton);
 
+        var loadAndPasteButton = new Button
+        {
+            Content = "载入并粘贴",
+            Padding = new Thickness(7, 4, 7, 4),
+            Margin = new Thickness(0, 0, 5, 0)
+        };
+        loadAndPasteButton.SetBinding(Button.CommandProperty, new Binding(nameof(SelectiveAttributesViewModel.LoadAndPastePresetCommand)));
+        presetButtons.Children.Add(loadAndPasteButton);
+
         var deletePresetButton = new Button { Content = "删除", Padding = new Thickness(7, 4, 7, 4) };
         deletePresetButton.SetBinding(Button.CommandProperty, new Binding(nameof(SelectiveAttributesViewModel.DeletePresetCommand)));
         presetButtons.Children.Add(deletePresetButton);
@@ -113,7 +122,9 @@ public sealed class SelectiveAttributesView : UserControl
             Margin = new Thickness(0, 2, 0, 4)
         });
 
-        panel.Children.Add(CreateCheckBox("位置 X / Y / Z", nameof(SelectiveAttributesViewModel.CopyPosition)));
+        panel.Children.Add(CreateCheckBox("位置 X", nameof(SelectiveAttributesViewModel.CopyX)));
+        panel.Children.Add(CreateCheckBox("位置 Y", nameof(SelectiveAttributesViewModel.CopyY)));
+        panel.Children.Add(CreateCheckBox("位置 Z", nameof(SelectiveAttributesViewModel.CopyZ)));
         panel.Children.Add(CreateCheckBox("不透明度", nameof(SelectiveAttributesViewModel.CopyOpacity)));
         panel.Children.Add(CreateCheckBox("缩放率", nameof(SelectiveAttributesViewModel.CopyZoom)));
         panel.Children.Add(CreateCheckBox("旋转", nameof(SelectiveAttributesViewModel.CopyRotation)));
