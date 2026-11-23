@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Change this to the folder containing YukkuriMovieMaker.exe and the YMM4 DLLs. Keep the trailing slash. -->
+    <YMM4DirPath>C:\YukkuriMovieMaker4\</YMM4DirPath>
+  </PropertyGroup>
+</Project>
