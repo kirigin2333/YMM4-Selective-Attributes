@@ -53,7 +53,7 @@ $props = @"
 </Project>
 "@
 
-Set-Content -Path (Join-Path $repoRoot "Directory.Build.props") -Value $props -Encoding UTF8
+[System.IO.File]::WriteAllText((Join-Path $repoRoot "Directory.Build.props"), $props, [System.Text.Encoding]::UTF8)
 
 Push-Location $repoRoot
 try {
