@@ -74,7 +74,8 @@ The current ViewModel implements this workflow:
 3. Selected animation groups are copied when matching Animation properties exist: X/Y/Z, Opacity, Zoom, Rotation, Volume, and Pan.
 4. Blend and IsHidden are copied only through matching writable public properties of the same type.
 5. VideoEffects and AudioEffects are taken from `source.GetClone()` and assigned to matching target properties. The cloned item itself is never substituted for a target.
-6. The operation records one undo step when at least one property was applied.
+6. Optional common direct properties include FadeIn, FadeOut, PlaybackRate, IsInverted, IsAlwaysOnTop, and IsZOrderEnabled, where source and target expose matching writable properties.
+7. The operation records one undo step when at least one property was applied.
 
 The code does not replace target items or intentionally write media paths, text content, audio source, frame, layer, or length. Effect-list assignment still needs runtime verification.
 
@@ -91,4 +92,4 @@ The code does not replace target items or intentionally write media paths, text 
 1. Compile the project against the exact local v4.55.0.0 installation.
 2. Test with two disposable items using distinct media/text/audio contents; verify only selected attributes change.
 3. Test Undo/Redo and mixed target types.
-4. Inspect effect-copy semantics and the shared-keyframe behavior before adding effects/filters.
+4. Inspect effect-copy semantics and the shared-keyframe behavior before treating effects/filters as production-safe.
