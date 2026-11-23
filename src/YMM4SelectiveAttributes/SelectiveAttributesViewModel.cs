@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using System.Windows.Input;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Plugin;
@@ -11,6 +12,23 @@ namespace YMM4SelectiveAttributes;
 public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITimelineToolViewModel, IDisposable
 {
     private sealed record Track(Animation Animation, double[] Values);
+
+    private sealed class PresetOptions
+    {
+        public bool CopyPosition { get; set; }
+        public bool CopyOpacity { get; set; }
+        public bool CopyZoom { get; set; }
+        public bool CopyRotation { get; set; }
+        public bool CopyVolume { get; set; }
+        public bool CopyPan { get; set; }
+        public bool CopyBlend { get; set; }
+        public bool CopyVisibility { get; set; }
+        public bool CopyVideoEffects { get; set; }
+        public bool CopyAudioEffects { get; set; }
+        public bool CopyExtraProperties { get; set; }
+        public bool FitLength { get; set; }
+        public bool KeepPosition { get; set; }
+    }
     private sealed record Snapshot(
         int Length,
         IReadOnlyList<int> Frames,
@@ -79,13 +97,52 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     private bool keepPosition;
     public bool KeepPosition { get => keepPosition; set => Set(ref keepPosition, value); }
 
+    private string presetName = "";
+    public string PresetName
+    {
+        get => presetName;
+        set
+        {
+            if (Set(ref presetName, value))
+                savePresetCommand?.RaiseCanExecuteChanged();
+        }
+    }
+
+    private string? selectedPreset;
+    public string? SelectedPreset
+    {
+        get => selectedPreset;
+        set
+        {
+            if (Set(ref selectedPreset, value))
+            {
+                loadPresetCommand?.RaiseCanExecuteChanged();
+                deletePresetCommand?.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public System.Collections.ObjectModel.ObservableCollection<string> PresetNames { get; } = [];
+
+    private readonly Dictionary<string, PresetOptions> presets = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string presetFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "YMM4SelectiveAttributes",
+        "presets.json");
+
     private string status = "先选中一个来源物品，点击“复制来源属性”。";
     public string Status { get => status; private set => Set(ref status, value); }
 
     private readonly ActionCommand copySourceCommand;
     private readonly ActionCommand pasteTargetsCommand;
+    private readonly ActionCommand savePresetCommand;
+    private readonly ActionCommand loadPresetCommand;
+    private readonly ActionCommand deletePresetCommand;
     public ICommand CopySourceCommand => copySourceCommand;
     public ICommand PasteTargetsCommand => pasteTargetsCommand;
+    public ICommand SavePresetCommand => savePresetCommand;
+    public ICommand LoadPresetCommand => loadPresetCommand;
+    public ICommand DeletePresetCommand => deletePresetCommand;
 
     public string Title => "Selective Attributes";
     public event EventHandler<CreateNewToolViewRequestedEventArgs>? CreateNewToolViewRequested;
@@ -94,6 +151,129 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     {
         copySourceCommand = new ActionCommand(_ => CanCopySource(), _ => CopySource());
         pasteTargetsCommand = new ActionCommand(_ => CanPasteTargets(), _ => PasteTargets());
+        savePresetCommand = new ActionCommand(_ => !string.IsNullOrWhiteSpace(PresetName), _ => SavePreset());
+        loadPresetCommand = new ActionCommand(_ => !string.IsNullOrWhiteSpace(SelectedPreset) && presets.ContainsKey(SelectedPreset), _ => LoadPreset());
+        deletePresetCommand = new ActionCommand(_ => !string.IsNullOrWhiteSpace(SelectedPreset) && presets.ContainsKey(SelectedPreset), _ => DeletePreset());
+        LoadPresetsFromDisk();
+    }
+
+    private PresetOptions CapturePreset() => new()
+    {
+        CopyPosition = CopyPosition,
+        CopyOpacity = CopyOpacity,
+        CopyZoom = CopyZoom,
+        CopyRotation = CopyRotation,
+        CopyVolume = CopyVolume,
+        CopyPan = CopyPan,
+        CopyBlend = CopyBlend,
+        CopyVisibility = CopyVisibility,
+        CopyVideoEffects = CopyVideoEffects,
+        CopyAudioEffects = CopyAudioEffects,
+        CopyExtraProperties = CopyExtraProperties,
+        FitLength = FitLength,
+        KeepPosition = KeepPosition
+    };
+
+    private void ApplyPreset(PresetOptions options)
+    {
+        CopyPosition = options.CopyPosition;
+        CopyOpacity = options.CopyOpacity;
+        CopyZoom = options.CopyZoom;
+        CopyRotation = options.CopyRotation;
+        CopyVolume = options.CopyVolume;
+        CopyPan = options.CopyPan;
+        CopyBlend = options.CopyBlend;
+        CopyVisibility = options.CopyVisibility;
+        CopyVideoEffects = options.CopyVideoEffects;
+        CopyAudioEffects = options.CopyAudioEffects;
+        CopyExtraProperties = options.CopyExtraProperties;
+        FitLength = options.FitLength;
+        KeepPosition = options.KeepPosition;
+    }
+
+    private void SavePreset()
+    {
+        var name = PresetName.Trim();
+        if (name.Length == 0)
+            return;
+
+        presets[name] = CapturePreset();
+        RefreshPresetNames(name);
+        if (PersistPresets())
+            Status = $"属性预设“{name}”已保存。";
+    }
+
+    private void LoadPreset()
+    {
+        if (SelectedPreset is not { } name || !presets.TryGetValue(name, out var options))
+            return;
+
+        ApplyPreset(options);
+        Status = $"已载入属性预设“{name}”。";
+    }
+
+    private void DeletePreset()
+    {
+        if (SelectedPreset is not { } name || !presets.Remove(name))
+            return;
+
+        RefreshPresetNames(null);
+        if (PersistPresets())
+            Status = $"属性预设“{name}”已删除。";
+    }
+
+    private void LoadPresetsFromDisk()
+    {
+        try
+        {
+            if (!File.Exists(presetFilePath))
+                return;
+
+            var json = File.ReadAllText(presetFilePath);
+            var loaded = JsonSerializer.Deserialize<Dictionary<string, PresetOptions>>(json);
+            if (loaded is null)
+                return;
+
+            foreach (var entry in loaded)
+                presets[entry.Key] = entry.Value;
+
+            RefreshPresetNames(null);
+        }
+        catch (Exception ex)
+        {
+            Status = $"读取预设失败：{ex.Message}";
+        }
+    }
+
+    private bool PersistPresets()
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(presetFilePath)!;
+            Directory.CreateDirectory(directory);
+            var json = JsonSerializer.Serialize(presets, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(presetFilePath, json);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Status = $"保存预设失败：{ex.Message}";
+            return false;
+        }
+    }
+
+    private void RefreshPresetNames(string? selectName)
+    {
+        PresetNames.Clear();
+        foreach (var name in presets.Keys.OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase))
+            PresetNames.Add(name);
+
+        SelectedPreset = selectName is not null && presets.ContainsKey(selectName)
+            ? selectName
+            : PresetNames.FirstOrDefault();
+
+        loadPresetCommand?.RaiseCanExecuteChanged();
+        deletePresetCommand?.RaiseCanExecuteChanged();
     }
 
     public void SetTimelineToolInfo(TimelineToolInfo info)
