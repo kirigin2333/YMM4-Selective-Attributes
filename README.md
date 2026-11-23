@@ -1,57 +1,60 @@
-# YMM4 Selective Attributes
+# YMM4 选择性属性复制插件（Selective Attributes）
 
-A WPF tool plugin for Yukkuri Movie Maker 4. The intended workflow is:
+这是一个适用于 Yukkuri Movie Maker 4（YMM4）的 WPF 工具插件。使用流程如下：
 
-1. Select exactly one source item on the YMM4 timeline.
-2. Click **复制来源属性** in the tool panel.
-3. Select one or more target items.
-4. Choose the attribute groups and click **粘贴到选中物品**.
+1. 在 YMM4 时间轴上只选中一个素材，作为属性来源。
+2. 在插件面板中点击 **复制来源属性**。
+3. 选中一个或多个目标素材。
+4. 选择要复制的属性类别，然后点击 **粘贴到选中物品**。
 
-Named presets are stored per Windows user and survive YMM4 restarts. Saving a preset with an existing name overwrites that preset. The implementation edits animation tracks and a small set of direct item properties. It does not replace target items or copy their media path, text, audio source, timeline position, layer, or duration.
+命名预设按 Windows 用户分别保存在本机，重启 YMM4 后仍然保留。保存与已有预设同名的预设时，会覆盖原预设。插件会修改动画轨道以及少量素材的直接属性；不会替换目标素材，也不会复制来源素材的媒体路径、文字内容、音频来源、时间轴位置、图层或时长。
 
-## Build requirements
+## 编译环境要求
 
-- YMM4 4.55.0.0 installed on Windows.
-- .NET 10 SDK (Visual Studio is not required).
-- The YMM4 installation directory containing `YukkuriMovieMaker.dll`, `YukkuriMovieMaker.Plugin.dll`, and `YukkuriMovieMaker.Controls.dll`.
+- Windows 系统，并已安装 YMM4 4.55.0.0。
+- .NET 10 SDK（不需要安装 Visual Studio）。
+- YMM4 安装目录中需要包含以下文件：
+  - `YukkuriMovieMaker.dll`
+  - `YukkuriMovieMaker.Plugin.dll`
+  - `YukkuriMovieMaker.Controls.dll`
 
-## Build
+## 编译与安装
 
-Run this from PowerShell in the repository directory (replace the path with the folder containing `YukkuriMovieMaker.exe`):
+在仓库目录中打开 PowerShell，运行以下命令（请将路径替换为实际的 YMM4 安装目录，即包含 `YukkuriMovieMaker.exe` 的文件夹）：
 
 ```powershell
 .\build.ps1 -YMM4DirPath "C:\YukkuriMovieMaker4"
 ```
 
-The script checks the YMM4 DLLs and .NET 10 SDK, writes `Directory.Build.props`, builds the project, installs the resulting plugin DLL, and creates a YMM4 installer package. Visual Studio is not required. If the .NET 10 SDK is missing, install it before running the script.
+脚本会检查 YMM4 所需 DLL 和 .NET 10 SDK，生成 `Directory.Build.props`，编译项目，将生成的插件 DLL 安装到 YMM4 插件目录，并创建 YMM4 安装包。整个过程不需要 Visual Studio。如果尚未安装 .NET 10 SDK，请先安装后再运行脚本。
 
-If the build succeeds and the path is correct, the post-build target copies the plugin DLL into:
+如果编译成功且 YMM4 路径正确，编译后的步骤会将插件 DLL 复制到：
 
 ```
-<YMM4DirPath>\user\plugin\YMM4SelectiveAttributes\
+<YMM4安装目录>\user\plugin\YMM4SelectiveAttributes\
 ```
 
-The installable package is created at `dist\\YMM4SelectiveAttributes.ymme`. You can share this single file with other users; they can double-click it to open YMM4's plugin installer. Restart YMM4 and open the tool from the Tools menu.
+可安装的插件包会生成在 `dist\YMM4SelectiveAttributes.ymme`。可以将这个文件分享给其他用户；对方双击文件即可打开 YMM4 插件安装器。安装后重启 YMM4，并从「工具」菜单中打开本插件。
 
-## Current implementation scope
+## 当前实现的功能范围
 
-- Animation tracks: X, Y, Z, Opacity, Zoom, Rotation, Volume, and Pan (when present on the selected item type).
-- Keyframe/midpoint frame positions are copied; optional fit-to-target-length mapping is included.
-- Optional keep-target-start-position offset for X/Y/Z.
-- Blend and hidden/visible state are copied through matching public properties when the target type exposes a writable property of the same type.
-- Optional common item properties include fade-in/out, playback rate, inversion, always-on-top, and Z-order enablement, where writable on the target.
-- Video effect and audio effect collections are taken from a deep-cloned source item and assigned to matching target properties; the cloned item itself is never substituted for the target.
-- Multiple selected target items are supported.
-- Undo history is recorded through YMM4's UndoRedoManager.
+- 动画轨道：X、Y、Z、不透明度（Opacity）、缩放（Zoom）、旋转（Rotation）、音量（Volume）和声像（Pan）；具体支持情况取决于所选素材类型。
+- 复制关键帧和中间点的帧位置；提供可选的按目标素材时长进行适配映射。
+- 提供可选项：保留目标素材的 X/Y/Z 起始位置偏移。
+- 如果目标素材具有类型匹配且可写的公开属性，则复制混合模式（Blend）以及隐藏/显示状态。
+- 可选复制常见素材属性，包括淡入/淡出、播放速度、反转、置顶，以及 Z 序启用状态；是否可用取决于目标素材是否提供可写属性。
+- 视频效果和音频效果集合通过来源素材的深度克隆获取，并赋值给目标素材中对应的属性；不会用克隆素材替换目标素材。
+- 支持同时选择多个目标素材。
+- 通过 YMM4 的 UndoRedoManager 记录撤销历史，支持撤销和重做。
 
-## Known limitations
+## 已知限制
 
-- The user has confirmed the previous build loads in YMM4 4.55.0.0 and that batch paste, undo/redo, media preservation, and video-effect copying work. The newly added preset UI still needs a fresh build and runtime test.
-- YMM4's basic `IVideoItem` model exposes one `Zoom` animation and one `Rotation` animation in the motion-copy implementation used as a reference. Independent X/Y/Z rotation or independent X/Y scale are not implemented here.
-- Effect collections are copied via YMM4's item-clone mechanism, but the effect-stack assignment and undo behavior still need runtime validation on v4.55.0.0.
-- YMM4 keyframes may be shared by multiple animation tracks on an item. The current frame-sync routine is adapted from ToolBoxPlugin and must be tested to ensure changing selected tracks does not alter unrelated animated tracks.
-- Named attribute presets can be saved, loaded, and deleted. Presets store the checkbox/option configuration as JSON under `%APPDATA%\\YMM4SelectiveAttributes\\presets.json`; they do not store source items or media.
-- The basic blend property is applied only if YMM4 exposes a writable property with a matching type on the target item.
-- The plugin copies from one selected source item at a time; paste can target multiple selected items, applying only properties available on each target type.
+- 用户已确认此前的构建版本能够在 YMM4 4.55.0.0 中加载，并验证了批量粘贴、撤销/重做、保留目标媒体内容以及视频效果复制功能。预设界面仍需在最新构建版本中重新进行运行测试。
+- 本插件参考的 YMM4 基础 `IVideoItem` 模型，在运动属性复制实现中提供一条 `Zoom` 动画和一条 `Rotation` 动画。因此，目前不支持独立的 X/Y/Z 旋转通道，也不支持独立的 X/Y 缩放通道。
+- 效果集合通过 YMM4 的素材克隆机制复制，但效果堆栈赋值及其撤销行为仍需在 v4.55.0.0 中进行运行验证。
+- YMM4 的关键帧可能由同一素材上的多个动画轨道共享。当前帧同步流程参考并改编自 ToolBoxPlugin，仍需测试确认：修改已选择的轨道时，不会影响其他未选择的动画轨道。
+- 支持保存、载入和删除命名属性预设。预设以 JSON 格式保存在 `%APPDATA%\YMM4SelectiveAttributes\presets.json`；预设保存的是复选框和选项配置，不保存来源素材或媒体内容。
+- 只有当 YMM4 在目标素材上提供类型匹配且可写的属性时，才会应用基础混合模式（Blend）。
+- 每次只能从一个已选中的来源素材复制属性；粘贴时可以选择多个目标素材。插件只会应用各目标素材类型所支持的属性。
 
-The copy routine is based on the public YMM4 ToolBoxPlugin motion-copy implementation, adapted to a standalone tool panel. See `docs/IMPLEMENTATION_NOTES.md` for the investigation log and compatibility caveats.
+属性复制逻辑基于 YMM4 ToolBoxPlugin 中公开的运动属性复制实现，并改编为独立工具面板。调查记录和兼容性注意事项请参阅 `docs/IMPLEMENTATION_NOTES.md`。
