@@ -7,7 +7,7 @@ A WPF tool plugin for Yukkuri Movie Maker 4. The intended workflow is:
 3. Select one or more target items.
 4. Choose the attribute groups and click **粘贴到选中物品**.
 
-The implementation edits animation tracks and a small set of direct item properties. It does not replace target items or copy their media path, text, audio source, timeline position, layer, or duration.
+Named presets are stored per Windows user and survive YMM4 restarts. Saving a preset with an existing name overwrites that preset. The implementation edits animation tracks and a small set of direct item properties. It does not replace target items or copy their media path, text, audio source, timeline position, layer, or duration.
 
 ## Build requirements
 
@@ -50,7 +50,7 @@ Restart YMM4 and open the tool from the Tools menu.
 - YMM4's basic `IVideoItem` model exposes one `Zoom` animation and one `Rotation` animation in the motion-copy implementation used as a reference. Independent X/Y/Z rotation or independent X/Y scale are not implemented here.
 - Effect collections are copied via YMM4's item-clone mechanism, but the effect-stack assignment and undo behavior still need runtime validation on v4.55.0.0.
 - YMM4 keyframes may be shared by multiple animation tracks on an item. The current frame-sync routine is adapted from ToolBoxPlugin and must be tested to ensure changing selected tracks does not alter unrelated animated tracks.
-- Preset save/load is not implemented yet.
+- Named attribute presets can be saved, loaded, and deleted. Presets store the checkbox/option configuration as JSON under `%APPDATA%\\YMM4SelectiveAttributes\\presets.json`; they do not store source items or media.
 - The basic blend property is applied only if YMM4 exposes a writable property with a matching type on the target item.
 - The plugin copies from one selected source item at a time; paste can target multiple selected items, applying only properties available on each target type.
 
