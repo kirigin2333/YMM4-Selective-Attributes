@@ -90,6 +90,6 @@ The code does not replace target items or intentionally write media paths, text 
 
 ## Next validation steps
 1. Compile the project against the exact local v4.55.0.0 installation.
-2. Test with two disposable items using distinct media/text/audio contents; verify only selected attributes change.
+2. Follow `docs/TEST_PLAN.md` using a disposable project.
 3. Test Undo/Redo and mixed target types.
 4. Inspect effect-copy semantics and the shared-keyframe behavior before treating effects/filters as production-safe.
