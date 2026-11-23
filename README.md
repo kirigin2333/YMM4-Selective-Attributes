@@ -50,6 +50,6 @@ Restart YMM4 and open the tool from the Tools menu.
 - Effect collections are copied via YMM4's item-clone mechanism, but the effect-stack assignment and undo behavior still need runtime validation on v4.55.0.0.
 - Preset save/load is not implemented yet.
 - The basic blend property is applied only if YMM4 exposes a writable property with a matching type on the target item.
-- The plugin currently copies from one selected source item at a time; paste can target multiple selected video items.
+- The plugin copies from one selected source item at a time; paste can target multiple selected items, applying only properties available on each target type.
 
 The copy routine is based on the public YMM4 ToolBoxPlugin motion-copy implementation, adapted to a standalone tool panel. See `docs/IMPLEMENTATION_NOTES.md` for the investigation log and compatibility caveats.
