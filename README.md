@@ -1,5 +1,7 @@
 # YMM4 选择性属性复制插件（Selective Attributes）
 
+**当前版本：v1.0.0**
+
 这是一个适用于 Yukkuri Movie Maker 4（YMM4）的 WPF 工具插件。使用流程如下：
 
 1. 在 YMM4 时间轴上只选中一个素材，作为属性来源。
