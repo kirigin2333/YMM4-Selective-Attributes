@@ -6,26 +6,29 @@
 - .NET target: `net10.0-windows10.0.19041.0` (YMM4 4.47.0.0+)
 
 ## Product behavior
-The tool should copy only selected attributes from a source timeline item to one or more target timeline items. Target media/text/audio content must remain unchanged.
+Copy selected attributes from one source timeline item to one or more selected target timeline items. Target media/text/audio content must remain unchanged.
 
 Planned selectable groups:
 - Position X/Y/Z
-- Scale X/Y/Z
-- Rotation X/Y/Z
+- Scale
+- Rotation
 - Opacity
 - Blend mode
 - Visibility
 - Effects/filters and their parameters
-- Midpoint
+- Midpoint/keyframe positions
 - Other properties only where safe copying can be established
 
 ## Verified integration facts
 - YMM4 tool-window plugins implement `YukkuriMovieMaker.Plugin.IToolPlugin`.
 - A tool plugin supplies a ViewModel type implementing `IToolViewModel` and a WPF UserControl view type.
 - YMM4 4.47.0.0+ plugin projects target `net10.0-windows10.0.19041.0`.
-- The plugin API assembly is supplied by the YMM4 installation; build references should match the target YMM4 installation.
+- A timeline tool ViewModel can implement `ITimelineToolViewModel`; YMM4 calls `SetTimelineToolInfo(TimelineToolInfo info)`.
+- The injected `TimelineToolInfo` exposes `Timeline` and `UndoRedoManager`. A recent public plugin uses `info.Timeline.SelectedItems` to access the current selection, and observes `Timeline.PropertyChanged` for `SelectedItems`.
+- The YMM4 project model exposes `IVideoItem` animation tracks X, Y, Z, Opacity, Zoom, Rotation, Blend, and VideoEffects. The public ToolBoxPlugin motion-copy implementation directly uses X/Y/Z/Opacity/Zoom/Rotation and `Animation.CopyFrom`.
+- `UndoRedoManager.Record()` is used by that implementation after mutating selected items.
 
-## v4.55 assembly inspection so far
+## v4.55 assembly inspection
 The uploaded `YukkuriMovieMaker.Controls.dll` is a valid PE/.NET assembly. Its embedded metadata reports:
 - Assembly name: `YukkuriMovieMaker.Controls`
 - Assembly version: `1.0.0.0`
@@ -34,25 +37,56 @@ The uploaded `YukkuriMovieMaker.Controls.dll` is a valid PE/.NET assembly. Its e
 - Target platform: `Windows10.0.19041.0`
 - SHA-256: `3042951871e6a7a2e7199ce666f1170282d2b58b7cb559d779a10ee3a49fb9f3`
 
-Names visible in the assembly metadata/string table include `FastCanvasItemsControl`, `IFastCanvasItemsControlViewModel`, `EffectSelectorItemBase<T>`, `PropertyEditorAttributeCreatedArgs`, and several effect-selector/editor controls. These names suggest relevant UI/control infrastructure exists in this assembly, but strings alone do not establish public accessibility, method signatures, or a supported route to selected timeline items. No API-level conclusion is drawn from these names yet.
+The assembly is only 9,216 bytes. Its metadata/string table includes names such as `FastCanvasItemsControl`, `IFastCanvasItemsControlViewModel`, `EffectSelectorItemBase<T>`, and `PropertyEditorAttributeCreatedArgs`. These names are useful clues but do not establish method signatures or public accessibility.
 
-## Timeline integration discovery (public sample code)
-A public YMM4 timeline-tool sample shows a tool ViewModel implementing both `IToolViewModel` and `ITimelineToolViewModel`. The host calls `SetTimelineToolInfo(TimelineToolInfo info)`; the sample then uses `info.Timeline`, `info.Scenes`, `info.UndoRedoManager`, and `info.AsyncAwaitStatus` to create a `TimelineViewModel` for the active scene. This is useful evidence that YMM4 can inject the active timeline and undo/redo manager into a tool ViewModel through this extension interface.
+The supplied `YukkuriMovieMaker.Plugin.dll` (8,137,216 bytes; SHA-256 `0efbd5c7932bfe4e90e449d65cbc40ea64dccaaa3a4c5416e91d95fcafa4cc15`) and `YukkuriMovieMaker.dll` (5,641,728 bytes; SHA-256 `b91f3f8b968eab4f497a97dd77893099faed84e5607ca4cf4ee539d211b75945`) are also valid .NET assemblies. Strings in the main assembly confirm names including `TimelineToolInfo`, `SelectedItems`, `KeyFrames`, `Opacity`, `Visibility`, and `Blend`. Full IL/API inspection is still pending because no .NET/IL disassembler is available in the current environment.
 
-Important limitation: the sample uses the injected timeline to display another timeline view and observe the current frame. It does not demonstrate how to obtain the current selection, how to change selected items, or how to copy individual properties. Therefore it advances the timeline/undo integration question but does not yet solve safe attribute transfer.
+## Key implementation reference found
+The public `Dolphin-kun/ToolBoxPlugin` repository contains a feature named Motion Copy. Its source:
+- obtains selected objects from `IToolBoxContext.SelectedItems` and filters to `IVideoItem`;
+- clones the source X/Y/Z/Opacity/Zoom/Rotation `Animation` objects using `Animation.CopyFrom`;
+- snapshots source keyframe frames and active values;
+- maps keyframe frames to the target length when requested;
+- updates target `KeyFrames` and animation values;
+- optionally preserves the target's original X/Y/Z start value;
+- calls `UndoRedoManager.Record()` after paste.
 
-A separate public Object List plugin advertises item enumeration and multi-selection support, but its README explicitly warns that it uses YMM4 non-public APIs and may break after YMM4 updates. That is evidence a non-public route exists in the ecosystem, not evidence that it is safe or compatible with v4.55.0.0. If the required selection API is internal, the implementation may need version-gated reflection and should be treated as compatibility-sensitive.
+The companion ViewModel in that repository receives `TimelineToolInfo`, stores `info.Timeline` and `info.UndoRedoManager`, and reads `timeline.SelectedItems`. This establishes a concrete implementation pattern for the core motion-copy feature.
 
-## Critical implementation constraint
-The public tool-plugin interface establishes how to add a tool window. The timeline-tool sample establishes a route to the active timeline and undo/redo manager. Neither source establishes a supported API for enumerating selected timeline items or mutating every item property. The implementation must not assume that names found in assembly strings are callable public APIs.
+Reference source:
+- `https://github.com/Dolphin-kun/ToolBoxPlugin/blob/2642ba1e47e51fa10a355668fd3308e98c7bef65/ToolBoxPlugin/Items/MotionCopy/MotionCopyCommand.cs`
+- `https://github.com/Dolphin-kun/ToolBoxPlugin/blob/2642ba1e47e51fa10a355668fd3308e98c7bef65/ToolBoxPlugin/ViewModel/ToolBoxViewModel.cs`
 
-Before implementing copy/paste, inspect the exact v4.55.0.0 assemblies and sample code to identify selection access, property models, effect serialization/copy semantics, and undo/redo integration. If a property cannot be safely copied without changing target media/content, leave it unsupported and document that limitation.
+A separate public Object List plugin explicitly warns that it uses non-public YMM4 APIs. That warning is relevant to more advanced timeline UI manipulation, but the current attribute-copy implementation is now based on the concrete public ToolBoxPlugin pattern rather than that plugin's internal API approach.
 
-## Current status
-- Repository access confirmed.
-- Three YMM4 assemblies have been supplied across the conversation: `YukkuriMovieMaker.Plugin.dll`, `YukkuriMovieMaker.dll`, and `YukkuriMovieMaker.Controls.dll`. The latest uploaded Controls DLL is available for direct inspection in this turn.
-- Basic PE/.NET metadata and strings have been inspected; full IL/API inspection is still pending because no .NET/IL disassembler is available in the current environment.
-- A public timeline-tool sample has been inspected and confirms active timeline / undo-redo injection into an `ITimelineToolViewModel`.
-- Current selection access and safe per-property mutation remain unverified.
-- Project implementation and CI build are not yet complete.
-- No plugin binary has been built or tested in YMM4 yet.
+## Current source implementation in this repository
+A first standalone WPF tool-plugin scaffold has been committed:
+- `src/YMM4SelectiveAttributes/YMM4SelectiveAttributes.csproj`
+- `src/YMM4SelectiveAttributes/SelectiveAttributesPlugin.cs`
+- `src/YMM4SelectiveAttributes/SelectiveAttributesViewModel.cs`
+- `src/YMM4SelectiveAttributes/SelectiveAttributesView.cs`
+- `Directory.Build.props.sample`
+- `README.md`
+
+The current ViewModel implements this workflow:
+1. Exactly one selected `IVideoItem` is captured as the source.
+2. The user selects one or more target `IVideoItem` objects.
+3. Selected animation groups are copied: X/Y/Z, Opacity, Zoom, Rotation.
+4. Blend and IsHidden are copied only through matching public properties of the same type.
+5. The operation records one undo step.
+
+The code does not replace target items or write media paths, text content, audio source, frame, layer, or length.
+
+## Known limitations / risks
+- This source has not yet been compiled or run against YMM4 4.55.0.0. It is not an installable release yet.
+- The currently implemented `IVideoItem` motion groups include one `Zoom` track and one `Rotation` track; independent X/Y scale and XYZ rotation are not implemented.
+- Video/audio effects and their parameters are not copied yet. Effect cloning and preserving unrelated target animations/keyframes need additional validation before safely implementing this.
+- Preset save/load is not implemented yet.
+- The keyframe synchronization algorithm is adapted from ToolBoxPlugin. It still needs runtime validation against target items that have other animated properties.
+- No CI build or YMM4 runtime test has been completed.
+
+## Next validation steps
+1. Compile the project against the exact local v4.55.0.0 installation.
+2. Test with two disposable items using distinct media/text/audio contents; verify only selected attributes change.
+3. Test Undo/Redo and mixed target types.
+4. Inspect effect-copy semantics and the shared-keyframe behavior before adding effects/filters.
