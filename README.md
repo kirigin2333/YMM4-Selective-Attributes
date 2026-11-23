@@ -35,10 +35,11 @@ Restart YMM4 and open the tool from the Tools menu.
 
 ## Current implementation scope
 
-- Animation tracks: X, Y, Z, Opacity, Zoom, Rotation.
+- Animation tracks: X, Y, Z, Opacity, Zoom, Rotation, Volume, and Pan (when present on the selected item type).
 - Keyframe/midpoint frame positions are copied; optional fit-to-target-length mapping is included.
 - Optional keep-target-start-position offset for X/Y/Z.
 - Blend and hidden/visible state are copied through matching public properties when the target type exposes a writable property of the same type.
+- Video effect and audio effect collections are taken from a deep-cloned source item and assigned to matching target properties; the cloned item itself is never substituted for the target.
 - Multiple selected target items are supported.
 - Undo history is recorded through YMM4's UndoRedoManager.
 
@@ -46,8 +47,9 @@ Restart YMM4 and open the tool from the Tools menu.
 
 - The current code has not yet been compiled or run against YMM4 4.55.0.0. Treat this as an implementation-in-progress, not an installable release.
 - YMM4's basic `IVideoItem` model exposes one `Zoom` animation and one `Rotation` animation in the motion-copy implementation used as a reference. Independent X/Y/Z rotation or independent X/Y scale are not implemented here.
-- Video/audio effects and their parameters are not copied yet. Their cloning and undo semantics still need to be verified.
+- Effect collections are copied via YMM4's item-clone mechanism, but the effect-stack assignment and undo behavior still need runtime validation on v4.55.0.0.
 - Preset save/load is not implemented yet.
+- The basic blend property is applied only if YMM4 exposes a writable property with a matching type on the target item.
 - The plugin currently copies from one selected source item at a time; paste can target multiple selected video items.
 
 The copy routine is based on the public YMM4 ToolBoxPlugin motion-copy implementation, adapted to a standalone tool panel. See `docs/IMPLEMENTATION_NOTES.md` for the investigation log and compatibility caveats.
