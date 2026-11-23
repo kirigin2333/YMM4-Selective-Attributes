@@ -180,22 +180,51 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
             return;
         }
 
+        var changed = false;
+        var skippedSomewhere = false;
+
         foreach (var target in targets)
         {
-            PasteAnimations(target, sourceSnapshot, selectedNames);
+            changed |= PasteAnimations(target, sourceSnapshot, selectedNames);
 
-            if (CopyBlend && sourceSnapshot.HasBlend)
-                TryCopyProperty(sourceSnapshot.Blend, target, "Blend");
-            if (CopyVisibility && sourceSnapshot.IsHidden is bool hidden)
-                TryCopyProperty(hidden, target, "IsHidden");
-            if (CopyVideoEffects && sourceSnapshot.HasVideoEffects)
-                TryCopyProperty(sourceSnapshot.VideoEffects, target, "VideoEffects");
-            if (CopyAudioEffects && sourceSnapshot.HasAudioEffects)
-                TryCopyProperty(sourceSnapshot.AudioEffects, target, "AudioEffects");
+            if (CopyBlend)
+            {
+                var copied = sourceSnapshot.HasBlend && TryCopyProperty(sourceSnapshot.Blend, target, "Blend");
+                changed |= copied;
+                skippedSomewhere |= !copied;
+            }
+
+            if (CopyVisibility)
+            {
+                var copied = sourceSnapshot.IsHidden is bool hidden && TryCopyProperty(hidden, target, "IsHidden");
+                changed |= copied;
+                skippedSomewhere |= !copied;
+            }
+
+            if (CopyVideoEffects)
+            {
+                var copied = sourceSnapshot.HasVideoEffects && TryCopyProperty(sourceSnapshot.VideoEffects, target, "VideoEffects");
+                changed |= copied;
+                skippedSomewhere |= !copied;
+            }
+
+            if (CopyAudioEffects)
+            {
+                var copied = sourceSnapshot.HasAudioEffects && TryCopyProperty(sourceSnapshot.AudioEffects, target, "AudioEffects");
+                changed |= copied;
+                skippedSomewhere |= !copied;
+            }
+        }
+
+        if (!changed)
+        {
+            Status = "所选属性没有可应用到这些目标物品的匹配属性。";
+            return;
         }
 
         undoRedoManager.Record();
-        Status = $"已将选中的属性粘贴到 {targets.Count} 个目标物品。素材路径、文字内容和音频源内容不会被替换。";
+        Status = $"已将选中的属性粘贴到 {targets.Count} 个目标物品。素材路径、文字内容和音频源内容不会被替换。"
+            + (skippedSomewhere ? " 部分属性因目标物品类型不支持而跳过。" : "");
     }
 
     private IEnumerable<string> GetSelectedAnimationNames()
@@ -218,14 +247,14 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
             yield return "Pan";
     }
 
-    private void PasteAnimations(IItem item, Snapshot sourceSnapshot, HashSet<string> names)
+    private bool PasteAnimations(IItem item, Snapshot sourceSnapshot, HashSet<string> names)
     {
         var targets = GetAnimations(item)
             .Where(entry => names.Contains(entry.Name) && sourceSnapshot.Tracks.ContainsKey(entry.Name))
             .ToList();
 
         if (targets.Count == 0)
-            return;
+            return false;
 
         var usesKeyFrames = targets.Any(entry =>
             sourceSnapshot.Tracks[entry.Name].Animation.AnimationType.IsKeyFrameSupported());
@@ -257,6 +286,8 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
             if (KeepPosition && PositionNames.Contains(name) && track.Values.Length > 0)
                 animation.AddToEachValues(originalFirstValue - track.Values[0]);
         }
+
+        return true;
     }
 
     private static IEnumerable<(string Name, Animation Animation)> GetAnimations(IItem item)
@@ -317,16 +348,24 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     private static PropertyInfo? FindPublicProperty(Type type, string name) =>
         type.GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
 
-    private static void TryCopyProperty(object? value, object target, string propertyName)
+    private static bool TryCopyProperty(object? value, object target, string propertyName)
     {
         if (value is null)
-            return;
+            return false;
 
         var property = FindPublicProperty(target.GetType(), propertyName);
         if (property is null || !property.CanWrite || property.PropertyType != value.GetType())
-            return;
+            return false;
 
-        property.SetValue(target, value);
+        try
+        {
+            property.SetValue(target, value);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public ToolState SaveState() => new()
