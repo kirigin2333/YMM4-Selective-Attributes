@@ -19,28 +19,20 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         bool HasBlend,
         bool? IsHidden,
         object? VideoEffects,
-        bool HasVideoEffects);
+        bool HasVideoEffects,
+        object? AudioEffects,
+        bool HasAudioEffects);
 
-    private static readonly string[] PositionNames =
+    private static readonly string[] AnimationPropertyNames =
     [
-        nameof(IVideoItem.X),
-        nameof(IVideoItem.Y),
-        nameof(IVideoItem.Z)
+        "X", "Y", "Z", "Opacity", "Zoom", "Rotation", "Volume", "Pan"
     ];
 
-    private static IEnumerable<(string Name, Animation Animation)> GetAnimations(IVideoItem item) =>
-    [
-        (nameof(IVideoItem.X), item.X),
-        (nameof(IVideoItem.Y), item.Y),
-        (nameof(IVideoItem.Z), item.Z),
-        (nameof(IVideoItem.Opacity), item.Opacity),
-        (nameof(IVideoItem.Zoom), item.Zoom),
-        (nameof(IVideoItem.Rotation), item.Rotation)
-    ];
+    private static readonly string[] PositionNames = ["X", "Y", "Z"];
 
     private Timeline? timeline;
     private UndoRedoManager? undoRedoManager;
-    private IVideoItem? sourceItem;
+    private IItem? sourceItem;
     private Snapshot? snapshot;
 
     private bool copyPosition = true;
@@ -55,14 +47,23 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     private bool copyRotation = true;
     public bool CopyRotation { get => copyRotation; set => Set(ref copyRotation, value); }
 
+    private bool copyVolume;
+    public bool CopyVolume { get => copyVolume; set => Set(ref copyVolume, value); }
+
+    private bool copyPan;
+    public bool CopyPan { get => copyPan; set => Set(ref copyPan, value); }
+
     private bool copyBlend;
     public bool CopyBlend { get => copyBlend; set => Set(ref copyBlend, value); }
 
     private bool copyVisibility;
     public bool CopyVisibility { get => copyVisibility; set => Set(ref copyVisibility, value); }
 
-    private bool copyEffects;
-    public bool CopyEffects { get => copyEffects; set => Set(ref copyEffects, value); }
+    private bool copyVideoEffects;
+    public bool CopyVideoEffects { get => copyVideoEffects; set => Set(ref copyVideoEffects, value); }
+
+    private bool copyAudioEffects;
+    public bool CopyAudioEffects { get => copyAudioEffects; set => Set(ref copyAudioEffects, value); }
 
     private bool fitLength = true;
     public bool FitLength { get => fitLength; set => Set(ref fitLength, value); }
@@ -94,22 +95,22 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
             : "已连接时间轴。先选中一个来源物品，再复制属性。";
     }
 
-    private List<IVideoItem> GetSelectedVideoItems() =>
-        timeline?.SelectedItems?.OfType<IVideoItem>().ToList() ?? [];
+    private List<IItem> GetSelectedItems() =>
+        timeline?.SelectedItems?.ToList() ?? [];
 
-    private bool CanCopySource() => GetSelectedVideoItems().Count == 1;
+    private bool CanCopySource() => GetSelectedItems().Count == 1;
 
     private bool CanPasteTargets() =>
         snapshot is not null &&
         undoRedoManager is not null &&
-        GetSelectedVideoItems().Any(item => !ReferenceEquals(item, sourceItem));
+        GetSelectedItems().Any(item => !ReferenceEquals(item, sourceItem));
 
     private void CopySource()
     {
-        var selected = GetSelectedVideoItems();
+        var selected = GetSelectedItems();
         if (selected.Count != 1)
         {
-            Status = "复制来源时请只选中一个视频类物品。";
+            Status = "复制来源时请只选中一个物品。";
             return;
         }
 
@@ -126,27 +127,32 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         var blendProperty = FindPublicProperty(source.GetType(), "Blend");
         var blend = blendProperty?.CanRead == true ? blendProperty.GetValue(source) : null;
         var hasBlend = blendProperty?.CanRead == true;
+
         var hiddenProperty = FindPublicProperty(source.GetType(), "IsHidden");
         bool? isHidden = hiddenProperty?.PropertyType == typeof(bool) && hiddenProperty.CanRead
             ? (bool?)hiddenProperty.GetValue(source)
             : null;
 
-        // GetClone() gives us an independent copy of the source item's effect collection.
-        // Only the cloned VideoEffects property is retained; the target item itself is never replaced.
+        // GetClone() deep-clones the item model. We retain only the effect collections
+        // from that clone, never the cloned item itself or its media/text/audio content.
         var clonedSource = source.GetClone();
-        var effectsProperty = FindPublicProperty(clonedSource.GetType(), "VideoEffects");
-        var videoEffects = effectsProperty?.CanRead == true ? effectsProperty.GetValue(clonedSource) : null;
-        var hasVideoEffects = effectsProperty?.CanRead == true;
+        var videoEffectsProperty = FindPublicProperty(clonedSource.GetType(), "VideoEffects");
+        var audioEffectsProperty = FindPublicProperty(clonedSource.GetType(), "AudioEffects");
+        var videoEffects = videoEffectsProperty?.CanRead == true ? videoEffectsProperty.GetValue(clonedSource) : null;
+        var audioEffects = audioEffectsProperty?.CanRead == true ? audioEffectsProperty.GetValue(clonedSource) : null;
 
         snapshot = new Snapshot(
-            source.Length,
-            source.KeyFrames.Frames.ToArray(),
+            GetIntProperty(source, "Length") ?? 1,
+            GetKeyFrames(source)?.Frames.ToArray() ?? [],
             tracks,
             blend,
             hasBlend,
             isHidden,
             videoEffects,
-            hasVideoEffects);
+            videoEffectsProperty?.CanRead == true,
+            audioEffects,
+            audioEffectsProperty?.CanRead == true);
+
         sourceItem = source;
         Status = "来源属性已复制。现在选择一个或多个目标物品，再点击“粘贴到选中物品”。";
     }
@@ -156,7 +162,7 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         if (snapshot is not { } sourceSnapshot || undoRedoManager is null)
             return;
 
-        var targets = GetSelectedVideoItems()
+        var targets = GetSelectedItems()
             .Where(item => !ReferenceEquals(item, sourceItem))
             .ToList();
 
@@ -167,7 +173,8 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         }
 
         var selectedNames = GetSelectedAnimationNames().ToHashSet();
-        if (selectedNames.Count == 0 && !CopyBlend && !CopyVisibility && !CopyEffects)
+        if (selectedNames.Count == 0 &&
+            !CopyBlend && !CopyVisibility && !CopyVideoEffects && !CopyAudioEffects)
         {
             Status = "请至少勾选一个要复制的属性。";
             return;
@@ -176,16 +183,19 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         foreach (var target in targets)
         {
             PasteAnimations(target, sourceSnapshot, selectedNames);
+
             if (CopyBlend && sourceSnapshot.HasBlend)
                 TryCopyProperty(sourceSnapshot.Blend, target, "Blend");
             if (CopyVisibility && sourceSnapshot.IsHidden is bool hidden)
                 TryCopyProperty(hidden, target, "IsHidden");
-            if (CopyEffects && sourceSnapshot.HasVideoEffects)
+            if (CopyVideoEffects && sourceSnapshot.HasVideoEffects)
                 TryCopyProperty(sourceSnapshot.VideoEffects, target, "VideoEffects");
+            if (CopyAudioEffects && sourceSnapshot.HasAudioEffects)
+                TryCopyProperty(sourceSnapshot.AudioEffects, target, "AudioEffects");
         }
 
         undoRedoManager.Record();
-        Status = $"已将选中的属性粘贴到 {targets.Count} 个目标物品。素材路径、文字内容和音频内容未被复制。";
+        Status = $"已将选中的属性粘贴到 {targets.Count} 个目标物品。素材路径、文字内容和音频源内容不会被替换。";
     }
 
     private IEnumerable<string> GetSelectedAnimationNames()
@@ -197,14 +207,18 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         }
 
         if (CopyOpacity)
-            yield return nameof(IVideoItem.Opacity);
+            yield return "Opacity";
         if (CopyZoom)
-            yield return nameof(IVideoItem.Zoom);
+            yield return "Zoom";
         if (CopyRotation)
-            yield return nameof(IVideoItem.Rotation);
+            yield return "Rotation";
+        if (CopyVolume)
+            yield return "Volume";
+        if (CopyPan)
+            yield return "Pan";
     }
 
-    private void PasteAnimations(IVideoItem item, Snapshot sourceSnapshot, HashSet<string> names)
+    private void PasteAnimations(IItem item, Snapshot sourceSnapshot, HashSet<string> names)
     {
         var targets = GetAnimations(item)
             .Where(entry => names.Contains(entry.Name) && sourceSnapshot.Tracks.ContainsKey(entry.Name))
@@ -216,9 +230,12 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         var usesKeyFrames = targets.Any(entry =>
             sourceSnapshot.Tracks[entry.Name].Animation.AnimationType.IsKeyFrameSupported());
 
-        var mappedFrames = MapFrames(sourceSnapshot, item.Length, FitLength);
-        if (usesKeyFrames)
-            SyncKeyFrames(item.KeyFrames, mappedFrames.Select(entry => entry.Frame).ToArray());
+        var targetLength = GetIntProperty(item, "Length") ?? 1;
+        var mappedFrames = MapFrames(sourceSnapshot, targetLength, FitLength);
+        var targetKeyFrames = GetKeyFrames(item);
+
+        if (usesKeyFrames && targetKeyFrames is not null)
+            SyncKeyFrames(targetKeyFrames, mappedFrames.Select(entry => entry.Frame).ToArray());
 
         foreach (var (name, animation) in targets)
         {
@@ -239,6 +256,16 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
             if (KeepPosition && PositionNames.Contains(name) && track.Values.Length > 0)
                 animation.AddToEachValues(originalFirstValue - track.Values[0]);
+        }
+    }
+
+    private static IEnumerable<(string Name, Animation Animation)> GetAnimations(IItem item)
+    {
+        foreach (var name in AnimationPropertyNames)
+        {
+            var property = FindPublicProperty(item.GetType(), name);
+            if (property?.CanRead == true && property.GetValue(item) is Animation animation)
+                yield return (name, animation);
         }
     }
 
@@ -271,6 +298,20 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
             if (!frames.Contains(keyFrames.Frames[i]))
                 keyFrames.RemoveAt(i);
         }
+    }
+
+    private static KeyFrames? GetKeyFrames(IItem item)
+    {
+        var property = FindPublicProperty(item.GetType(), "KeyFrames");
+        return property?.CanRead == true ? property.GetValue(item) as KeyFrames : null;
+    }
+
+    private static int? GetIntProperty(object item, string name)
+    {
+        var property = FindPublicProperty(item.GetType(), name);
+        return property?.PropertyType == typeof(int) && property.CanRead
+            ? (int?)property.GetValue(item)
+            : null;
     }
 
     private static PropertyInfo? FindPublicProperty(Type type, string name) =>
