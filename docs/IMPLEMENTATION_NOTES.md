@@ -69,20 +69,22 @@ A first standalone WPF tool-plugin scaffold has been committed:
 - `README.md`
 
 The current ViewModel implements this workflow:
-1. Exactly one selected `IVideoItem` is captured as the source.
-2. The user selects one or more target `IVideoItem` objects.
-3. Selected animation groups are copied: X/Y/Z, Opacity, Zoom, Rotation.
-4. Blend and IsHidden are copied only through matching public properties of the same type.
-5. The operation records one undo step.
+1. Exactly one selected `IItem` is captured as the source.
+2. The user selects one or more target `IItem` objects.
+3. Selected animation groups are copied when matching Animation properties exist: X/Y/Z, Opacity, Zoom, Rotation, Volume, and Pan.
+4. Blend and IsHidden are copied only through matching writable public properties of the same type.
+5. VideoEffects and AudioEffects are taken from `source.GetClone()` and assigned to matching target properties. The cloned item itself is never substituted for a target.
+6. The operation records one undo step when at least one property was applied.
 
-The code does not replace target items or write media paths, text content, audio source, frame, layer, or length.
+The code does not replace target items or intentionally write media paths, text content, audio source, frame, layer, or length. Effect-list assignment still needs runtime verification.
 
 ## Known limitations / risks
 - This source has not yet been compiled or run against YMM4 4.55.0.0. It is not an installable release yet.
-- The currently implemented `IVideoItem` motion groups include one `Zoom` track and one `Rotation` track; independent X/Y scale and XYZ rotation are not implemented.
-- Video/audio effects and their parameters are not copied yet. Effect cloning and preserving unrelated target animations/keyframes need additional validation before safely implementing this.
+- The currently implemented animation groups include one `Zoom` track and one `Rotation` track; independent X/Y scale and XYZ rotation are not implemented.
+- Volume and Pan are discovered by public property reflection and copied only when the source and target expose Animation-valued properties with those names.
+- VideoEffects and AudioEffects are copied from the source item's `GetClone()` result by assigning only the effect collection. This is based on public plugin code that uses `GetClone()` for item snapshots and on YMM4 interfaces exposing writable effect collections; the actual deep-clone and undo behavior still needs runtime validation.
 - Preset save/load is not implemented yet.
-- The keyframe synchronization algorithm is adapted from ToolBoxPlugin. It still needs runtime validation against target items that have other animated properties.
+- The keyframe synchronization algorithm is adapted from ToolBoxPlugin. It still needs runtime validation against target items that have other animated properties, because keyframe collections may be shared across tracks.
 - No CI build or YMM4 runtime test has been completed.
 
 ## Next validation steps
