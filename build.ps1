@@ -15,7 +15,16 @@ $requiredFiles = @(
     "YukkuriMovieMaker.exe",
     "YukkuriMovieMaker.dll",
     "YukkuriMovieMaker.Plugin.dll",
-    "YukkuriMovieMaker.Controls.dll"
+    "YukkuriMovieMaker.Controls.dll",
+    "NAudio.dll",
+    "NAudio.Core.dll",
+    "NAudio.WinMM.dll",
+    "SharpGen.Runtime.dll",
+    "SharpGen.Runtime.COM.dll",
+    "Vortice.Direct2D1.dll",
+    "Vortice.DirectX.dll",
+    "Vortice.Mathematics.dll",
+    "Newtonsoft.Json.dll"
 )
 
 foreach ($file in $requiredFiles) {
