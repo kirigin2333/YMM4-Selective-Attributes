@@ -8,7 +8,7 @@ using YukkuriMovieMaker.UndoRedo;
 
 namespace YMM4SelectiveAttributes;
 
-public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITimelineToolViewModel
+public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITimelineToolViewModel, IDisposable
 {
     private sealed record Track(Animation Animation, double[] Values);
     private sealed record Snapshot(
