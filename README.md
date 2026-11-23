@@ -39,6 +39,7 @@ Restart YMM4 and open the tool from the Tools menu.
 - Keyframe/midpoint frame positions are copied; optional fit-to-target-length mapping is included.
 - Optional keep-target-start-position offset for X/Y/Z.
 - Blend and hidden/visible state are copied through matching public properties when the target type exposes a writable property of the same type.
+- Optional common item properties include fade-in/out, playback rate, inversion, always-on-top, and Z-order enablement, where writable on the target.
 - Video effect and audio effect collections are taken from a deep-cloned source item and assigned to matching target properties; the cloned item itself is never substituted for the target.
 - Multiple selected target items are supported.
 - Undo history is recorded through YMM4's UndoRedoManager.
