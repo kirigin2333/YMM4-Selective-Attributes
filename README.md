@@ -23,7 +23,7 @@ Run this from PowerShell in the repository directory (replace the path with the 
 .\build.ps1 -YMM4DirPath "C:\YukkuriMovieMaker4"
 ```
 
-The script checks the YMM4 DLLs and .NET 10 SDK, writes `Directory.Build.props`, builds the project, and installs the resulting plugin DLL. Visual Studio is not required. If the .NET 10 SDK is missing, install it before running the script.
+The script checks the YMM4 DLLs and .NET 10 SDK, writes `Directory.Build.props`, builds the project, installs the resulting plugin DLL, and creates a YMM4 installer package. Visual Studio is not required. If the .NET 10 SDK is missing, install it before running the script.
 
 If the build succeeds and the path is correct, the post-build target copies the plugin DLL into:
 
@@ -31,7 +31,7 @@ If the build succeeds and the path is correct, the post-build target copies the 
 <YMM4DirPath>\user\plugin\YMM4SelectiveAttributes\
 ```
 
-Restart YMM4 and open the tool from the Tools menu.
+The installable package is created at `dist\\YMM4SelectiveAttributes.ymme`. You can share this single file with other users; they can double-click it to open YMM4's plugin installer. Restart YMM4 and open the tool from the Tools menu.
 
 ## Current implementation scope
 
