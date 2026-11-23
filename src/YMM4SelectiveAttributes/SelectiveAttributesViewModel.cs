@@ -17,6 +17,9 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     private sealed class PresetOptions
     {
         public bool CopyPosition { get; set; }
+        public bool CopyX { get; set; } = true;
+        public bool CopyY { get; set; } = true;
+        public bool CopyZ { get; set; } = true;
         public bool CopyOpacity { get; set; }
         public bool CopyZoom { get; set; }
         public bool CopyRotation { get; set; }
@@ -59,8 +62,14 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     private IItem? sourceItem;
     private Snapshot? snapshot;
 
-    private bool copyPosition = true;
-    public bool CopyPosition { get => copyPosition; set => Set(ref copyPosition, value); }
+    private bool copyX = true;
+    public bool CopyX { get => copyX; set => Set(ref copyX, value); }
+
+    private bool copyY = true;
+    public bool CopyY { get => copyY; set => Set(ref copyY, value); }
+
+    private bool copyZ = true;
+    public bool CopyZ { get => copyZ; set => Set(ref copyZ, value); }
 
     private bool copyOpacity = true;
     public bool CopyOpacity { get => copyOpacity; set => Set(ref copyOpacity, value); }
@@ -118,7 +127,9 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
             if (Set(ref selectedPreset, value))
             {
                 loadPresetCommand?.RaiseCanExecuteChanged();
+                loadAndPastePresetCommand?.RaiseCanExecuteChanged();
                 deletePresetCommand?.RaiseCanExecuteChanged();
+        loadAndPastePresetCommand?.RaiseCanExecuteChanged();
             }
         }
     }
@@ -139,11 +150,13 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     private readonly ActionCommand savePresetCommand;
     private readonly ActionCommand loadPresetCommand;
     private readonly ActionCommand deletePresetCommand;
+    private readonly ActionCommand loadAndPastePresetCommand;
     public ICommand CopySourceCommand => copySourceCommand;
     public ICommand PasteTargetsCommand => pasteTargetsCommand;
     public ICommand SavePresetCommand => savePresetCommand;
     public ICommand LoadPresetCommand => loadPresetCommand;
     public ICommand DeletePresetCommand => deletePresetCommand;
+    public ICommand LoadAndPastePresetCommand => loadAndPastePresetCommand;
 
     public string Title => "Selective Attributes";
     public event EventHandler<CreateNewToolViewRequestedEventArgs>? CreateNewToolViewRequested;
@@ -155,12 +168,15 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         savePresetCommand = new ActionCommand(_ => !string.IsNullOrWhiteSpace(PresetName), _ => SavePreset());
         loadPresetCommand = new ActionCommand(_ => !string.IsNullOrWhiteSpace(SelectedPreset) && presets.ContainsKey(SelectedPreset), _ => LoadPreset());
         deletePresetCommand = new ActionCommand(_ => !string.IsNullOrWhiteSpace(SelectedPreset) && presets.ContainsKey(SelectedPreset), _ => DeletePreset());
+        loadAndPastePresetCommand = new ActionCommand(_ => CanLoadAndPastePreset(), _ => LoadAndPastePreset());
         LoadPresetsFromDisk();
     }
 
     private PresetOptions CapturePreset() => new()
     {
-        CopyPosition = CopyPosition,
+        CopyX = CopyX,
+        CopyY = CopyY,
+        CopyZ = CopyZ,
         CopyOpacity = CopyOpacity,
         CopyZoom = CopyZoom,
         CopyRotation = CopyRotation,
@@ -177,7 +193,9 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
     private void ApplyPreset(PresetOptions options)
     {
-        CopyPosition = options.CopyPosition;
+        CopyX = options.CopyX;
+        CopyY = options.CopyY;
+        CopyZ = options.CopyZ;
         CopyOpacity = options.CopyOpacity;
         CopyZoom = options.CopyZoom;
         CopyRotation = options.CopyRotation;
@@ -211,6 +229,19 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
         ApplyPreset(options);
         Status = $"已载入属性预设“{name}”。";
+    }
+
+    private bool CanLoadAndPastePreset() =>
+        !string.IsNullOrWhiteSpace(SelectedPreset) &&
+        presets.ContainsKey(SelectedPreset) &&
+        snapshot is not null &&
+        undoRedoManager is not null &&
+        GetSelectedItems().Any(item => !ReferenceEquals(item, sourceItem));
+
+    private void LoadAndPastePreset()
+    {
+        LoadPreset();
+        PasteTargets();
     }
 
     private void DeletePreset()
@@ -463,11 +494,9 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
     private IEnumerable<string> GetSelectedAnimationNames()
     {
-        if (CopyPosition)
-        {
-            foreach (var name in PositionNames)
-                yield return name;
-        }
+        if (CopyX) yield return "X";
+        if (CopyY) yield return "Y";
+        if (CopyZ) yield return "Z";
 
         if (CopyOpacity)
             yield return "Opacity";
