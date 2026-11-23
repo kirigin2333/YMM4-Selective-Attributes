@@ -7,8 +7,8 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $installDir = (Resolve-Path $YMM4DirPath).Path
-if (-not $installDir.EndsWith("\")) {
-    $installDir += "\"
+if (-not $installDir.EndsWith("\\")) {
+    $installDir += "\\"
 }
 
 $requiredFiles = @(
@@ -40,7 +40,7 @@ if ($null -eq $dotnet) {
 }
 
 $sdkList = & dotnet --list-sdks
-if (-not ($sdkList | Where-Object { $_ -match '^10\.' })) {
+if (-not ($sdkList | Where-Object { $_ -match '^10\\.' })) {
     throw "The .NET 10 SDK was not found. Install the .NET 10 SDK, then run this script again."
 }
 
@@ -57,15 +57,20 @@ Set-Content -Path (Join-Path $repoRoot "Directory.Build.props") -Value $props -E
 
 Push-Location $repoRoot
 try {
-    & dotnet build ".\src\YMM4SelectiveAttributes\YMM4SelectiveAttributes.csproj" -c Release
+    & dotnet build ".\\src\\YMM4SelectiveAttributes\\YMM4SelectiveAttributes.csproj" -c Release
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet build failed with exit code $LASTEXITCODE"
     }
-    # Create a YMM4 installer package (.ymme is a ZIP archive with a renamed extension).
-    $projectDir = Join-Path $repoRoot "src\YMM4SelectiveAttributes"
-    $pluginDll = Join-Path $projectDir "bin\Release\net10.0-windows10.0.19041.0\YMM4SelectiveAttributes.dll"
+
+    # Package the plugin DLL and installer Readme.txt into the .ymme archive.
+    $projectDir = Join-Path $repoRoot "src\\YMM4SelectiveAttributes"
+    $pluginDll = Join-Path $projectDir "bin\\Release\\net10.0-windows10.0.19041.0\\YMM4SelectiveAttributes.dll"
+    $readmeFile = Join-Path $repoRoot "Readme.txt"
     if (-not (Test-Path $pluginDll)) {
         throw "Build output DLL not found: $pluginDll"
+    }
+    if (-not (Test-Path $readmeFile)) {
+        throw "Package Readme.txt not found: $readmeFile"
     }
 
     $packageRoot = Join-Path $repoRoot "dist"
@@ -80,6 +85,7 @@ try {
     New-Item -ItemType Directory -Path $pluginFolder -Force | Out-Null
     New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
     Copy-Item $pluginDll -Destination $pluginFolder
+    Copy-Item $readmeFile -Destination $stagingRoot
 
     if (Test-Path $packageZip) { Remove-Item $packageZip -Force }
     if (Test-Path $packageYmme) { Remove-Item $packageYmme -Force }
@@ -89,7 +95,7 @@ try {
 
     Write-Host ""
     Write-Host "Build complete."
-    Write-Host "Installed plugin DLL: $installDir\user\plugin\YMM4SelectiveAttributes\YMM4SelectiveAttributes.dll"
+    Write-Host "Installed plugin DLL: $installDir\\user\\plugin\\YMM4SelectiveAttributes\\YMM4SelectiveAttributes.dll"
     Write-Host "YMM4 installer package: $packageYmme"
 }
 finally {
