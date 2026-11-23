@@ -55,7 +55,7 @@ $props = @"
 
 [System.IO.File]::WriteAllText((Join-Path $repoRoot "Directory.Build.props"), $props, [System.Text.Encoding]::UTF8)
 
-Push-Location $repoRoot
+Push-Location -LiteralPath $repoRoot
 try {
     & dotnet build ".\src\YMM4SelectiveAttributes\YMM4SelectiveAttributes.csproj" -c Release
     if ($LASTEXITCODE -ne 0) {
