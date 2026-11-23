@@ -1,0 +1,96 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+
+namespace YMM4SelectiveAttributes;
+
+public sealed class SelectiveAttributesView : UserControl
+{
+    public SelectiveAttributesView()
+    {
+        var panel = new StackPanel
+        {
+            Margin = new Thickness(12)
+        };
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Selective Attributes",
+            FontSize = 18,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "1. 只选中一个来源物品并复制。 2. 选择一个或多个目标物品并粘贴。",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+
+        var copyButton = new Button
+        {
+            Content = "复制来源属性",
+            Padding = new Thickness(10, 6, 10, 6),
+            Margin = new Thickness(0, 0, 0, 6)
+        };
+        copyButton.SetBinding(Button.CommandProperty, new Binding(nameof(SelectiveAttributesViewModel.CopySourceCommand)));
+        panel.Children.Add(copyButton);
+
+        var pasteButton = new Button
+        {
+            Content = "粘贴到选中物品",
+            Padding = new Thickness(10, 6, 10, 6),
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        pasteButton.SetBinding(Button.CommandProperty, new Binding(nameof(SelectiveAttributesViewModel.PasteTargetsCommand)));
+        panel.Children.Add(pasteButton);
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "要复制的属性",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 2, 0, 4)
+        });
+
+        panel.Children.Add(CreateCheckBox("位置 X / Y / Z", nameof(SelectiveAttributesViewModel.CopyPosition)));
+        panel.Children.Add(CreateCheckBox("不透明度", nameof(SelectiveAttributesViewModel.CopyOpacity)));
+        panel.Children.Add(CreateCheckBox("缩放率", nameof(SelectiveAttributesViewModel.CopyZoom)));
+        panel.Children.Add(CreateCheckBox("旋转", nameof(SelectiveAttributesViewModel.CopyRotation)));
+        panel.Children.Add(CreateCheckBox("混合模式", nameof(SelectiveAttributesViewModel.CopyBlend)));
+        panel.Children.Add(CreateCheckBox("可见性（隐藏状态）", nameof(SelectiveAttributesViewModel.CopyVisibility)));
+
+        panel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8) });
+        panel.Children.Add(CreateCheckBox("按目标物品长度缩放关键帧位置", nameof(SelectiveAttributesViewModel.FitLength)));
+        panel.Children.Add(CreateCheckBox("保持目标物品原本的起始位置", nameof(SelectiveAttributesViewModel.KeepPosition)));
+
+        var status = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        status.SetBinding(TextBlock.TextProperty, new Binding(nameof(SelectiveAttributesViewModel.Status)));
+        panel.Children.Add(status);
+
+        Content = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = panel
+        };
+    }
+
+    private static CheckBox CreateCheckBox(string label, string propertyName)
+    {
+        var checkBox = new CheckBox
+        {
+            Content = label,
+            Margin = new Thickness(0, 3, 0, 3),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        checkBox.SetBinding(ToggleButton.IsCheckedProperty, new Binding(propertyName)
+        {
+            Mode = BindingMode.TwoWay
+        });
+        return checkBox;
+    }
+}
