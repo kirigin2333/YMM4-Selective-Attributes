@@ -74,25 +74,53 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
     private string status = "先选中一个来源物品，点击“复制来源属性”。";
     public string Status { get => status; private set => Set(ref status, value); }
 
-    public ICommand CopySourceCommand { get; }
-    public ICommand PasteTargetsCommand { get; }
+    private readonly ActionCommand copySourceCommand;
+    private readonly ActionCommand pasteTargetsCommand;
+    public ICommand CopySourceCommand => copySourceCommand;
+    public ICommand PasteTargetsCommand => pasteTargetsCommand
 
     public string Title => "Selective Attributes";
     public event EventHandler<CreateNewToolViewRequestedEventArgs>? CreateNewToolViewRequested;
 
     public SelectiveAttributesViewModel()
     {
-        CopySourceCommand = new ActionCommand(_ => CanCopySource(), _ => CopySource());
-        PasteTargetsCommand = new ActionCommand(_ => CanPasteTargets(), _ => PasteTargets());
+        copySourceCommand = new ActionCommand(_ => CanCopySource(), _ => CopySource());
+        pasteTargetsCommand = new ActionCommand(_ => CanPasteTargets(), _ => PasteTargets());
     }
 
     public void SetTimelineToolInfo(TimelineToolInfo info)
     {
+        if (timeline is not null)
+            timeline.PropertyChanged -= Timeline_PropertyChanged;
+
         timeline = info.Timeline;
         undoRedoManager = info.UndoRedoManager;
+
+        if (timeline is not null)
+            timeline.PropertyChanged += Timeline_PropertyChanged;
+
         Status = timeline is null
             ? "当前没有可用的时间轴。"
             : "已连接时间轴。先选中一个来源物品，再复制属性。";
+        RaiseCommandCanExecuteChanged();
+    }
+
+    private void Timeline_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Timeline.SelectedItems))
+            RaiseCommandCanExecuteChanged();
+    }
+
+    private void RaiseCommandCanExecuteChanged()
+    {
+        copySourceCommand.RaiseCanExecuteChanged();
+        pasteTargetsCommand.RaiseCanExecuteChanged();
+    }
+
+    public void Dispose()
+    {
+        if (timeline is not null)
+            timeline.PropertyChanged -= Timeline_PropertyChanged;
     }
 
     private List<IItem> GetSelectedItems() =>
@@ -155,6 +183,7 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
 
         sourceItem = source;
         Status = "来源属性已复制。现在选择一个或多个目标物品，再点击“粘贴到选中物品”。";
+        RaiseCommandCanExecuteChanged();
     }
 
     private void PasteTargets()
@@ -225,6 +254,7 @@ public sealed class SelectiveAttributesViewModel : Bindable, IToolViewModel, ITi
         undoRedoManager.Record();
         Status = $"已将选中的属性粘贴到 {targets.Count} 个目标物品。素材路径、文字内容和音频源内容不会被替换。"
             + (skippedSomewhere ? " 部分属性因目标物品类型不支持而跳过。" : "");
+        RaiseCommandCanExecuteChanged();
     }
 
     private IEnumerable<string> GetSelectedAnimationNames()
